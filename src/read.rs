@@ -20,7 +20,7 @@ pub trait MqttRead: ReadBytesExt {
         let hd = try!(self.read_u8());
         let len = try!(self.read_remaining_length());
         let header = try!(Header::new(hd, len));
-        //println!("Header {:?}", header);
+
         if len == 0 {
             // no payload packets
             return match header.typ {

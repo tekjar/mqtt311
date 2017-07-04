@@ -54,11 +54,11 @@ pub trait MqttWrite: WriteBytesExt {
                 }
                 Ok(())
             },
-			&Packet::Connack(ref connack) => {
-                try!(self.write(&[0x20, 0x02, connack.session_present as u8, connack.code.to_u8()]));
+            &Packet::Connack(ref connack) => {
+                try!(self.write_all(&[0x20, 0x02, connack.session_present as u8, connack.code.to_u8()]));
                 Ok(())
             },
-			&Packet::Publish(ref publish) => {
+            &Packet::Publish(ref publish) => {
                 try!(self.write_u8(0b00110000 | publish.retain as u8 | (publish.qos.to_u8() << 1) | ((publish.dup as u8) << 3)));
                 let mut len = publish.topic_name.len() + 2 + publish.payload.len();
                 if publish.qos != QoS::AtMostOnce && None != publish.pid {
@@ -71,31 +71,31 @@ pub trait MqttWrite: WriteBytesExt {
                         try!(self.write_u16::<BigEndian>(pid.0));
                     }
                 }
-                try!(self.write(&publish.payload.as_ref()));
+                try!(self.write_all(&publish.payload.as_ref()));
                 Ok(())
             },
-			&Packet::Puback(ref pid) => {
-                try!(self.write(&[0x40, 0x02]));
+            &Packet::Puback(ref pid) => {
+                try!(self.write_all(&[0x40, 0x02]));
                 try!(self.write_u16::<BigEndian>(pid.0));
                 Ok(())
             },
             &Packet::Pubrec(ref pid) => {
-                try!(self.write(&[0x50, 0x02]));
+                try!(self.write_all(&[0x50, 0x02]));
                 try!(self.write_u16::<BigEndian>(pid.0));
                 Ok(())
             },
             &Packet::Pubrel(ref pid) => {
-                try!(self.write(&[0x62, 0x02]));
+                try!(self.write_all(&[0x62, 0x02]));
                 try!(self.write_u16::<BigEndian>(pid.0));
                 Ok(())
             },
             &Packet::Pubcomp(ref pid) => {
-                try!(self.write(&[0x70, 0x02]));
+                try!(self.write_all(&[0x70, 0x02]));
                 try!(self.write_u16::<BigEndian>(pid.0));
                 Ok(())
             },
-			&Packet::Subscribe(ref subscribe) => {
-                try!(self.write(&[0x82]));
+            &Packet::Subscribe(ref subscribe) => {
+                try!(self.write_all(&[0x82]));
                 let len = 2 + subscribe.topics.iter().fold(0, |s, ref t| s + t.topic_path.len() + 3);
                 try!(self.write_remaining_length(len));
                 try!(self.write_u16::<BigEndian>(subscribe.pid.0));
@@ -105,8 +105,8 @@ pub trait MqttWrite: WriteBytesExt {
                 }
                 Ok(())
             },
-			&Packet::Suback(ref suback) => {
-                try!(self.write(&[0x90]));
+            &Packet::Suback(ref suback) => {
+                try!(self.write_all(&[0x90]));
                 try!(self.write_remaining_length(suback.return_codes.len() + 2));
                 try!(self.write_u16::<BigEndian>(suback.pid.0));
                 let payload: Vec<u8> = suback.return_codes.iter().map({ |&code|
@@ -115,11 +115,11 @@ pub trait MqttWrite: WriteBytesExt {
                         SubscribeReturnCodes::Failure => 0x80
                     }
                 }).collect();
-                try!(self.write(&payload));
+                try!(self.write_all(&payload));
                 Ok(())
             },
-			&Packet::Unsubscribe(ref unsubscribe) => {
-                try!(self.write(&[0xA2]));
+            &Packet::Unsubscribe(ref unsubscribe) => {
+                try!(self.write_all(&[0xA2]));
                 let len = 2 + unsubscribe.topics.iter().fold(0, |s, ref topic| s + topic.len() + 2);
                 try!(self.write_remaining_length(len));
                 try!(self.write_u16::<BigEndian>(unsubscribe.pid.0));
@@ -128,21 +128,21 @@ pub trait MqttWrite: WriteBytesExt {
                 }
                 Ok(())
             },
-			&Packet::Unsuback(ref pid) => {
-                try!(self.write(&[0xB0, 0x02]));
+            &Packet::Unsuback(ref pid) => {
+                try!(self.write_all(&[0xB0, 0x02]));
                 try!(self.write_u16::<BigEndian>(pid.0));
                 Ok(())
             },
-			&Packet::Pingreq => {
-                try!(self.write(&[0xc0, 0]));
+            &Packet::Pingreq => {
+                try!(self.write_all(&[0xc0, 0]));
                 Ok(())
             },
-			&Packet::Pingresp => {
-                try!(self.write(&[0xd0, 0]));
+            &Packet::Pingresp => {
+                try!(self.write_all(&[0xd0, 0]));
                 Ok(())
             },
-			&Packet::Disconnect => {
-                try!(self.write(&[0xe0, 0]));
+            &Packet::Disconnect => {
+                try!(self.write_all(&[0xe0, 0]));
                 Ok(())
             }
         }
@@ -150,7 +150,7 @@ pub trait MqttWrite: WriteBytesExt {
 
     fn write_mqtt_string(&mut self, string: &str) -> Result<()> {
         try!(self.write_u16::<BigEndian>(string.len() as u16));
-        try!(self.write(string.as_bytes()));
+        try!(self.write_all(string.as_bytes()));
         Ok(())
     }
 
