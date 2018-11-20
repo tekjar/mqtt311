@@ -16,9 +16,7 @@ use mqtt::{
 };
 
 pub trait MqttRead: ReadBytesExt {
-    fn read_packet(&mut self) -> Result<Packet> {
-        let hd = self.read_u8()?;
-        let len = self.read_remaining_length()?;
+    fn deserialize(&mut self, hd: u8, len: usize) -> Result<Packet> {
         let header = Header::new(hd, len)?;
 
         if len == 0 {
@@ -29,6 +27,7 @@ pub trait MqttRead: ReadBytesExt {
                 _ => Err(Error::PayloadRequired)
             };
         }
+
         let mut raw_packet = self.take(len as u64);
 
         match header.typ {
@@ -76,6 +75,25 @@ pub trait MqttRead: ReadBytesExt {
             PacketType::Pingreq => Err(Error::IncorrectPacketFormat),
             PacketType::Pingresp => Err(Error::IncorrectPacketFormat),
             _ => Err(Error::UnsupportedPacketType)
+        }
+    }
+
+
+    fn read_packet(&mut self) -> Result<Packet> {
+        let hd = self.read_u8()?;
+        let len = self.read_remaining_length()?;
+
+        self.deserialize(hd, len)
+    }
+
+    fn read_packet_with_len(&mut self) -> Result<(Packet, usize)> {
+        let hd = self.read_u8()?;
+        let len = self.read_remaining_length()?;
+
+        match self.deserialize(hd, len)? {
+            Packet::Pingreq => Ok((Packet::Pingreq, 2)),
+            Packet::Pingresp => Ok((Packet::Pingresp, 2)),
+            p => Ok((p, len + 2))
         }
     }
 
