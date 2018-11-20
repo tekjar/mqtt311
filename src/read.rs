@@ -22,6 +22,7 @@ pub trait MqttRead: ReadBytesExt {
             return match header.typ {
                 PacketType::Pingreq => Ok(Packet::Pingreq),
                 PacketType::Pingresp => Ok(Packet::Pingresp),
+                PacketType::Disconnect => Ok(Packet::Disconnect),
                 _ => Err(Error::PayloadRequired)
             };
         }
