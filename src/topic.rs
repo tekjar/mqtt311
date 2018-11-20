@@ -147,8 +147,8 @@ impl TopicPath {
 
         Ok(TopicPath {
             path: String::from(path.as_ref()),
-            topics: topics,
-            wildcards: wildcards
+            topics,
+            wildcards
         })
     }
 }

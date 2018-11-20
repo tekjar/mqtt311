@@ -119,14 +119,14 @@ pub trait MqttRead: ReadBytesExt {
         };
 
         Ok(Connect {
-                protocol: protocol,
-                keep_alive: keep_alive,
-                client_id: client_id,
+                protocol,
+                keep_alive,
+                client_id,
                 clean_session: (connect_flags & 0b10) != 0,
-                last_will: last_will,
-                username: username,
-                password: password
-            }
+                last_will,
+                username,
+                password
+        }
         )
     }
 
@@ -158,7 +158,7 @@ pub trait MqttRead: ReadBytesExt {
                 qos: header.qos()?,
                 retain: header.retain(),
                 topic_name: topic_name?,
-                pid: pid,
+                pid,
                 payload: Arc::new(payload)
             }
         )
@@ -178,7 +178,7 @@ pub trait MqttRead: ReadBytesExt {
 
         Ok(Subscribe {
             pid: PacketIdentifier(pid),
-            topics: topics
+            topics
         })
     }
 
@@ -199,7 +199,7 @@ pub trait MqttRead: ReadBytesExt {
 
         Ok(Suback {
             pid: PacketIdentifier(pid),
-            return_codes: return_codes
+            return_codes
         })
     }
 
@@ -216,7 +216,7 @@ pub trait MqttRead: ReadBytesExt {
 
         Ok(Unsubscribe {
             pid: PacketIdentifier(pid),
-            topics: topics
+            topics
         })
     }
 

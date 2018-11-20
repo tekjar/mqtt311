@@ -19,7 +19,7 @@ impl Message {
             return Err(Error::TopicNameMustNotContainWildcard);
         }
         Ok(Box::new(Message {
-            topic: topic,
+            topic,
             qos: publish.qos,
             retain: publish.retain,
             pid: publish.pid,
@@ -31,7 +31,7 @@ impl Message {
         let topic = TopicPath::from(last_will.topic);
 
         Box::new(Message {
-            topic: topic,
+            topic,
             qos: last_will.qos,
             retain: last_will.retain,
             pid: None,
@@ -42,8 +42,8 @@ impl Message {
     pub fn to_pub(&self, qos: Option<QoS>, dup: bool) -> Box<Publish> {
         let qos = qos.unwrap_or(self.qos);
         Box::new(Publish {
-            dup: dup,
-            qos: qos,
+            dup,
+            qos,
             retain: self.retain,
             topic_name: self.topic.path.clone(),
             pid: self.pid,
@@ -56,9 +56,9 @@ impl Message {
         let qos = qos.unwrap_or(self.qos);
         Box::new(Message {
             topic: self.topic.clone(),
-            qos: qos,
+            qos,
             retain: self.retain,
-            pid: pid,
+            pid,
             payload: self.payload.clone()
         })
     }
