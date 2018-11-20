@@ -72,7 +72,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "mqtt311"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "byteorder 1.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "derive_more 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -274,6 +274,7 @@ impl MqttRead for TcpStream {}
 impl MqttRead for Cursor<Vec<u8>> {}
 impl<T: Read> MqttRead for Take<T> where T: Read {}
 impl<T: Read> MqttRead for BufReader<T> {}
+impl<'a> MqttRead for &'a[u8]{}
 
 #[cfg(test)]
 mod test {
