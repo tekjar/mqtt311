@@ -1,5 +1,10 @@
 extern crate byteorder;
 
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate derive_more;
+
 mod error;
 mod mqtt;
 mod read;

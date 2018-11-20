@@ -8,3 +8,5 @@ license = "MIT"
 
 [dependencies]
 byteorder = "0.4"
+failure = "0.1"
+derive_more = "0.13"
