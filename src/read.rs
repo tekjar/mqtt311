@@ -16,10 +16,8 @@ use mqtt::{
 };
 
 pub trait MqttRead: ReadBytesExt {
-    fn deserialize(&mut self, hd: u8, len: usize) -> Result<Packet> {
-        let header = Header::new(hd, len)?;
-
-        if len == 0 {
+    fn deserialize(&mut self, remaining_len: usize, header: Header) -> Result<Packet> {
+        if remaining_len == 0 {
             // no payload packets
             return match header.typ {
                 PacketType::Pingreq => Ok(Packet::Pingreq),
@@ -28,35 +26,35 @@ pub trait MqttRead: ReadBytesExt {
             };
         }
 
-        let mut raw_packet = self.take(len as u64);
+        let mut raw_packet = self.take(remaining_len as u64);
 
         match header.typ {
             PacketType::Connect => Ok(Packet::Connect(raw_packet.read_connect(header)?)),
             PacketType::Connack => Ok(Packet::Connack(raw_packet.read_connack(header)?)),
             PacketType::Publish => Ok(Packet::Publish(raw_packet.read_publish(header)?)),
             PacketType::Puback => {
-                if len != 2 {
+                if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
                 let pid = raw_packet.read_u16::<BigEndian>()?;
                 Ok(Packet::Puback(PacketIdentifier(pid)))
             },
             PacketType::Pubrec => {
-                if len != 2 {
+                if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
                 let pid = raw_packet.read_u16::<BigEndian>()?;
                 Ok(Packet::Pubrec(PacketIdentifier(pid)))
             },
             PacketType::Pubrel => {
-                if len != 2 {
+                if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
                 let pid = raw_packet.read_u16::<BigEndian>()?;
                 Ok(Packet::Pubrel(PacketIdentifier(pid)))
             },
             PacketType::Pubcomp => {
-                if len != 2 {
+                if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
                 let pid = raw_packet.read_u16::<BigEndian>()?;
@@ -66,7 +64,7 @@ pub trait MqttRead: ReadBytesExt {
             PacketType::Suback => Ok(Packet::Suback(raw_packet.read_suback(header)?)),
             PacketType::Unsubscribe => Ok(Packet::Unsubscribe(raw_packet.read_unsubscribe(header)?)),
             PacketType::Unsuback => {
-                if len != 2 {
+                if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
                 let pid = raw_packet.read_u16::<BigEndian>()?;
@@ -81,20 +79,20 @@ pub trait MqttRead: ReadBytesExt {
 
     fn read_packet(&mut self) -> Result<Packet> {
         let hd = self.read_u8()?;
-        let len = self.read_remaining_length()?;
+        let remaining_len = self.read_remaining_length()?;
 
-        self.deserialize(hd, len)
+        let header = Header::new(hd, remaining_len)?;
+        self.deserialize(remaining_len, header)
     }
 
     fn read_packet_with_len(&mut self) -> Result<(Packet, usize)> {
         let hd = self.read_u8()?;
-        let len = self.read_remaining_length()?;
+        let remaining_len = self.read_remaining_length()?;
 
-        match self.deserialize(hd, len)? {
-            Packet::Pingreq => Ok((Packet::Pingreq, 2)),
-            Packet::Pingresp => Ok((Packet::Pingresp, 2)),
-            p => Ok((p, len + 2))
-        }
+        let header = Header::new(hd, remaining_len)?;
+        let header_len = header.len();
+
+        Ok((self.deserialize(remaining_len, header)?, header_len + remaining_len))
     }
 
     fn read_connect(&mut self, _: Header) -> Result<Connect> {

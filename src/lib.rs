@@ -249,6 +249,12 @@ impl PacketIdentifier {
     }
 }
 
+//          7                          3                          0
+//          +--------------------------+--------------------------+
+// byte 1   | MQTT Control Packet Type | Flags for each type      |
+//          +--------------------------+--------------------------+
+// byte 2   |                  Remaining Length                   |
+//          +-----------------------------------------------------+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Header {
     hd: u8,
@@ -278,6 +284,23 @@ impl Header {
     #[inline]
     pub fn retain(&self) -> bool {
         (self.hd & 1) != 0
+    }
+
+    /// NOTE: Length of remaining_len field can vary from 1 - 4 bytes.
+    ///       This can be calculated using the value of remaining_len.
+    ///       This function give full length of the header (including control + flags byte)
+    #[inline]
+    pub fn len(&self) -> usize {
+        let remaining_len = self.len;
+        if remaining_len >= 2_097_152 {
+            4 + 1
+        } else if remaining_len >= 16_384 {
+            3 + 1
+        } else if remaining_len >= 128 {
+            2 + 1
+        } else {
+            1 + 1
+        }
     }
 }
 
