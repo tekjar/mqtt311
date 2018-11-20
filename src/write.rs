@@ -64,46 +64,46 @@ pub trait MqttWrite: WriteBytesExt {
                 self.write_u8(0b00110000 | publish.retain as u8 | (publish.qos.to_u8() << 1) | ((publish.dup as u8) << 3))?;
                 let mut len = publish.topic_name.len() + 2 + publish.payload.len();
 
-                if publish.qos != QoS::AtMostOnce && None != publish.pid {
+                if publish.qos != QoS::AtMostOnce && None != publish.pkid {
                     len += 2;
                 }
 
                 self.write_remaining_length(len)?;
                 self.write_mqtt_string(publish.topic_name.as_str())?;
                 if publish.qos != QoS::AtMostOnce {
-                    if let Some(pid) = publish.pid {
-                        self.write_u16::<BigEndian>(pid.0)?;
+                    if let Some(pkid) = publish.pkid {
+                        self.write_u16::<BigEndian>(pkid.0)?;
                     }
                 }
 
                 self.write_all(&publish.payload.as_ref())?;
                 Ok(())
             },
-            &Packet::Puback(ref pid) => {
+            &Packet::Puback(ref pkid) => {
                 self.write_all(&[0x40, 0x02])?;
-                self.write_u16::<BigEndian>(pid.0)?;
+                self.write_u16::<BigEndian>(pkid.0)?;
                 Ok(())
             },
-            &Packet::Pubrec(ref pid) => {
+            &Packet::Pubrec(ref pkid) => {
                 self.write_all(&[0x50, 0x02])?;
-                self.write_u16::<BigEndian>(pid.0)?;
+                self.write_u16::<BigEndian>(pkid.0)?;
                 Ok(())
             },
-            &Packet::Pubrel(ref pid) => {
+            &Packet::Pubrel(ref pkid) => {
                 self.write_all(&[0x62, 0x02])?;
-                self.write_u16::<BigEndian>(pid.0)?;
+                self.write_u16::<BigEndian>(pkid.0)?;
                 Ok(())
             },
-            &Packet::Pubcomp(ref pid) => {
+            &Packet::Pubcomp(ref pkid) => {
                 self.write_all(&[0x70, 0x02])?;
-                self.write_u16::<BigEndian>(pid.0)?;
+                self.write_u16::<BigEndian>(pkid.0)?;
                 Ok(())
             },
             &Packet::Subscribe(ref subscribe) => {
                 self.write_all(&[0x82])?;
                 let len = 2 + subscribe.topics.iter().fold(0, |s, ref t| s + t.topic_path.len() + 3);
                 self.write_remaining_length(len)?;
-                self.write_u16::<BigEndian>(subscribe.pid.0)?;
+                self.write_u16::<BigEndian>(subscribe.pkid.0)?;
                 for topic in subscribe.topics.as_ref() as &Vec<SubscribeTopic> {
                     self.write_mqtt_string(topic.topic_path.as_str())?;
                     self.write_u8(topic.qos.to_u8())?;
@@ -113,7 +113,7 @@ pub trait MqttWrite: WriteBytesExt {
             &Packet::Suback(ref suback) => {
                 self.write_all(&[0x90])?;
                 self.write_remaining_length(suback.return_codes.len() + 2)?;
-                self.write_u16::<BigEndian>(suback.pid.0)?;
+                self.write_u16::<BigEndian>(suback.pkid.0)?;
                 let payload: Vec<u8> = suback.return_codes.iter().map({ |&code|
                     match code {
                         SubscribeReturnCodes::Success(qos) => qos.to_u8(),
@@ -127,15 +127,15 @@ pub trait MqttWrite: WriteBytesExt {
                 self.write_all(&[0xA2])?;
                 let len = 2 + unsubscribe.topics.iter().fold(0, |s, ref topic| s + topic.len() + 2);
                 self.write_remaining_length(len)?;
-                self.write_u16::<BigEndian>(unsubscribe.pid.0)?;
+                self.write_u16::<BigEndian>(unsubscribe.pkid.0)?;
                 for topic in unsubscribe.topics.as_ref() as &Vec<String> {
                     self.write_mqtt_string(topic.as_str())?;
                 }
                 Ok(())
             },
-            &Packet::Unsuback(ref pid) => {
+            &Packet::Unsuback(ref pkid) => {
                 self.write_all(&[0xB0, 0x02])?;
-                self.write_u16::<BigEndian>(pid.0)?;
+                self.write_u16::<BigEndian>(pkid.0)?;
                 Ok(())
             },
             &Packet::Pingreq => {
@@ -276,7 +276,7 @@ mod test {
             qos: QoS::AtLeastOnce,
             retain: false,
             topic_name: "a/b".to_owned(),
-            pid: Some(PacketIdentifier(10)),
+            pkid: Some(PacketIdentifier(10)),
             payload: Arc::new(vec![0xF1, 0xF2, 0xF3, 0xF4])
         });
 
@@ -293,7 +293,7 @@ mod test {
             qos: QoS::AtMostOnce,
             retain: false,
             topic_name: "a/b".to_owned(),
-            pid: None,
+            pkid: None,
             payload: Arc::new(vec![0xE1, 0xE2, 0xE3, 0xE4])
         });
 
@@ -306,7 +306,7 @@ mod test {
     #[test]
     fn write_packet_subscribe_test() {
         let subscribe = Packet::Subscribe(Subscribe {
-            pid: PacketIdentifier(260),
+            pkid: PacketIdentifier(260),
             topics: vec![
                 SubscribeTopic { topic_path: "a/+".to_owned(), qos: QoS::AtMostOnce },
                 SubscribeTopic { topic_path: "#".to_owned(), qos: QoS::AtLeastOnce },
@@ -318,7 +318,7 @@ mod test {
         stream.write_packet(&subscribe).unwrap();
 
         assert_eq!(stream.get_ref().clone(),vec![0b10000010, 20,
-            0x01, 0x04, // pid = 260
+            0x01, 0x04, // pkid = 260
             0x00, 0x03, 'a' as u8, '/' as u8, '+' as u8, // topic filter = 'a/+'
             0x00, // qos = 0
             0x00, 0x01, '#' as u8, // topic filter = '#'

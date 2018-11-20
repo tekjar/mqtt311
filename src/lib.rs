@@ -338,8 +338,8 @@ mod test {
 
     #[test]
     fn packet_identifier_test() {
-        let pid = PacketIdentifier::zero();
-        assert_eq!(pid, PacketIdentifier(0));
-        assert_eq!(pid.next(), PacketIdentifier(1));
+        let pkid = PacketIdentifier::zero();
+        assert_eq!(pkid, PacketIdentifier(0));
+        assert_eq!(pkid.next(), PacketIdentifier(1));
     }
 }

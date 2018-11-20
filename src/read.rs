@@ -37,29 +37,29 @@ pub trait MqttRead: ReadBytesExt {
                 if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
-                let pid = raw_packet.read_u16::<BigEndian>()?;
-                Ok(Packet::Puback(PacketIdentifier(pid)))
+                let pkid = raw_packet.read_u16::<BigEndian>()?;
+                Ok(Packet::Puback(PacketIdentifier(pkid)))
             },
             PacketType::Pubrec => {
                 if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
-                let pid = raw_packet.read_u16::<BigEndian>()?;
-                Ok(Packet::Pubrec(PacketIdentifier(pid)))
+                let pkid = raw_packet.read_u16::<BigEndian>()?;
+                Ok(Packet::Pubrec(PacketIdentifier(pkid)))
             },
             PacketType::Pubrel => {
                 if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
-                let pid = raw_packet.read_u16::<BigEndian>()?;
-                Ok(Packet::Pubrel(PacketIdentifier(pid)))
+                let pkid = raw_packet.read_u16::<BigEndian>()?;
+                Ok(Packet::Pubrel(PacketIdentifier(pkid)))
             },
             PacketType::Pubcomp => {
                 if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
-                let pid = raw_packet.read_u16::<BigEndian>()?;
-                Ok(Packet::Pubcomp(PacketIdentifier(pid)))
+                let pkid = raw_packet.read_u16::<BigEndian>()?;
+                Ok(Packet::Pubcomp(PacketIdentifier(pkid)))
             },
             PacketType::Subscribe => Ok(Packet::Subscribe(raw_packet.read_subscribe(header)?)),
             PacketType::Suback => Ok(Packet::Suback(raw_packet.read_suback(header)?)),
@@ -68,8 +68,8 @@ pub trait MqttRead: ReadBytesExt {
                 if remaining_len != 2 {
                     return Err(Error::PayloadSizeIncorrect)
                 }
-                let pid = raw_packet.read_u16::<BigEndian>()?;
-                Ok(Packet::Unsuback(PacketIdentifier(pid)))
+                let pkid = raw_packet.read_u16::<BigEndian>()?;
+                Ok(Packet::Unsuback(PacketIdentifier(pkid)))
             },
             PacketType::Pingreq => Err(Error::IncorrectPacketFormat),
             PacketType::Pingresp => Err(Error::IncorrectPacketFormat),
@@ -162,7 +162,7 @@ pub trait MqttRead: ReadBytesExt {
     fn read_publish(&mut self, header: Header) -> Result<Publish> {
         let topic_name = self.read_mqtt_string();
         // Packet identifier exists where QoS > 0
-        let pid = if header.qos().unwrap() != QoS::AtMostOnce {
+        let pkid = if header.qos().unwrap() != QoS::AtMostOnce {
             Some(PacketIdentifier(self.read_u16::<BigEndian>()?))
         } else {
             None
@@ -175,14 +175,14 @@ pub trait MqttRead: ReadBytesExt {
                 qos: header.qos()?,
                 retain: header.retain(),
                 topic_name: topic_name?,
-                pid,
+            pkid: pkid,
                 payload: Arc::new(payload)
             }
         )
     }
 
     fn read_subscribe(&mut self, header: Header) -> Result<Subscribe> {
-        let pid = self.read_u16::<BigEndian>()?;
+        let pkid = self.read_u16::<BigEndian>()?;
         let mut remaining_bytes = header.len - 2;
         let mut topics = Vec::with_capacity(1);
 
@@ -194,13 +194,13 @@ pub trait MqttRead: ReadBytesExt {
         };
 
         Ok(Subscribe {
-            pid: PacketIdentifier(pid),
+            pkid: PacketIdentifier(pkid),
             topics
         })
     }
 
     fn read_suback(&mut self, header: Header) -> Result<Suback> {
-        let pid = self.read_u16::<BigEndian>()?;
+        let pkid = self.read_u16::<BigEndian>()?;
         let mut remaining_bytes = header.len - 2;
         let mut return_codes = Vec::with_capacity(remaining_bytes);
 
@@ -215,13 +215,13 @@ pub trait MqttRead: ReadBytesExt {
         };
 
         Ok(Suback {
-            pid: PacketIdentifier(pid),
+            pkid: PacketIdentifier(pkid),
             return_codes
         })
     }
 
     fn read_unsubscribe(&mut self, header: Header) -> Result<Unsubscribe> {
-        let pid = self.read_u16::<BigEndian>()?;
+        let pkid = self.read_u16::<BigEndian>()?;
         let mut remaining_bytes = header.len - 2;
         let mut topics = Vec::with_capacity(1);
 
@@ -232,7 +232,7 @@ pub trait MqttRead: ReadBytesExt {
         };
 
         Ok(Unsubscribe {
-            pid: PacketIdentifier(pid),
+            pkid: PacketIdentifier(pkid),
             topics
         })
     }
@@ -365,7 +365,7 @@ mod test {
         let mut stream = Cursor::new(vec![
             0b00110010, 11,
             0x00, 0x03, 'a' as u8, '/' as u8, 'b' as u8, // topic name = 'a/b'
-            0x00, 0x0a, // pid = 10
+            0x00, 0x0a, // pkid = 10
             0xF1, 0xF2, 0xF3, 0xF4
         ]);
 
@@ -376,7 +376,7 @@ mod test {
             qos: QoS::AtLeastOnce,
             retain: false,
             topic_name: "a/b".to_owned(),
-            pid: Some(PacketIdentifier(10)),
+            pkid: Some(PacketIdentifier(10)),
             payload: Arc::new(vec![0xF1, 0xF2, 0xF3, 0xF4])
         }));
     }
@@ -396,7 +396,7 @@ mod test {
             qos: QoS::AtMostOnce,
             retain: false,
             topic_name: "a/b".to_owned(),
-            pid: None,
+            pkid: None,
             payload: Arc::new(vec![0x01, 0x02])
         }));
     }
@@ -413,7 +413,7 @@ mod test {
     fn read_packet_subscribe_test() {
         let mut stream = Cursor::new(vec![
             0b10000010, 20,
-            0x01, 0x04, // pid = 260
+            0x01, 0x04, // pkid = 260
             0x00, 0x03, 'a' as u8, '/' as u8, '+' as u8, // topic filter = 'a/+'
             0x00, // qos = 0
             0x00, 0x01, '#' as u8, // topic filter = '#'
@@ -425,7 +425,7 @@ mod test {
         let packet = stream.read_packet().unwrap();
 
         assert_eq!(packet, Packet::Subscribe(Subscribe {
-            pid: PacketIdentifier(260),
+            pkid: PacketIdentifier(260),
             topics: vec![
                 SubscribeTopic { topic_path: "a/+".to_owned(), qos: QoS::AtMostOnce },
                 SubscribeTopic { topic_path: "#".to_owned(), qos: QoS::AtLeastOnce },
@@ -438,7 +438,7 @@ mod test {
     fn read_packet_unsubscribe_test() {
         let mut stream = Cursor::new(vec![
             0b10100010, 17,
-            0x00, 0x0F, // pid = 15
+            0x00, 0x0F, // pkid = 15
             0x00, 0x03, 'a' as u8, '/' as u8, '+' as u8, // topic filter = 'a/+'
             0x00, 0x01, '#' as u8, // topic filter = '#'
             0x00, 0x05, 'a' as u8, '/' as u8, 'b' as u8, '/' as u8, 'c' as u8, // topic filter = 'a/b/c'
@@ -447,7 +447,7 @@ mod test {
         let packet = stream.read_packet().unwrap();
 
         assert_eq!(packet, Packet::Unsubscribe(Unsubscribe {
-            pid: PacketIdentifier(15),
+            pkid: PacketIdentifier(15),
             topics: vec![
                 "a/+".to_owned(),
                 "#".to_owned(),
@@ -460,14 +460,14 @@ mod test {
     fn read_packet_suback_test() {
         let mut stream = Cursor::new(vec![
             0x90, 4,
-            0x00, 0x0F, // pid = 15
+            0x00, 0x0F, // pkid = 15
             0x01, 0x80
         ]);
 
         let packet = stream.read_packet().unwrap();
 
         assert_eq!(packet, Packet::Suback(Suback {
-            pid: PacketIdentifier(15),
+            pkid: PacketIdentifier(15),
             return_codes: vec![SubscribeReturnCodes::Success(QoS::AtLeastOnce), SubscribeReturnCodes::Failure]
         }));
     }

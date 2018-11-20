@@ -8,7 +8,7 @@ pub struct Message {
     pub qos: QoS,
     pub retain: bool,
     // Only for QoS 1,2
-    pub pid: Option<PacketIdentifier>,
+    pub pkid: Option<PacketIdentifier>,
     pub payload: Arc<Vec<u8>>
 }
 
@@ -22,7 +22,7 @@ impl Message {
             topic,
             qos: publish.qos,
             retain: publish.retain,
-            pid: publish.pid,
+            pkid: publish.pkid,
             payload: publish.payload.clone()
         }))
     }
@@ -34,7 +34,7 @@ impl Message {
             topic,
             qos: last_will.qos,
             retain: last_will.retain,
-            pid: None,
+            pkid: None,
             payload: Arc::new(last_will.message.into_bytes())
         })
     }
@@ -46,19 +46,19 @@ impl Message {
             qos,
             retain: self.retain,
             topic_name: self.topic.path.clone(),
-            pid: self.pid,
+            pkid: self.pkid,
             payload: self.payload.clone()
         })
     }
 
-    pub fn transform(&self, pid: Option<PacketIdentifier>, qos: Option<QoS>) -> Box<Message> {
-        let pid = pid.or(self.pid);
+    pub fn transform(&self, pkid: Option<PacketIdentifier>, qos: Option<QoS>) -> Box<Message> {
+        let pkid = pkid.or(self.pkid);
         let qos = qos.unwrap_or(self.qos);
         Box::new(Message {
             topic: self.topic.clone(),
             qos,
             retain: self.retain,
-            pid,
+            pkid: pkid,
             payload: self.payload.clone()
         })
     }
@@ -76,7 +76,7 @@ mod test {
             topic: "/a/b".to_topic_path().unwrap(),
             qos: QoS::AtLeastOnce,
             retain: false,
-            pid: Some(PacketIdentifier(1)),
+            pkid: Some(PacketIdentifier(1)),
             payload: Arc::new(vec![0x80, 0x40])
         };
         let publish = msg.to_pub(None, false);
@@ -86,7 +86,7 @@ mod test {
             qos: QoS::AtLeastOnce,
             retain: false,
             topic_name: "/a/b".to_owned(),
-            pid: Some(PacketIdentifier(1)),
+            pkid: Some(PacketIdentifier(1)),
             payload: Arc::new(vec![0x80, 0x40])
         }));
     }
@@ -98,14 +98,14 @@ mod test {
             qos: QoS::ExactlyOnce,
             retain: true,
             topic_name: "/a/b/c".to_owned(),
-            pid: Some(PacketIdentifier(2)),
+            pkid: Some(PacketIdentifier(2)),
             payload: Arc::new(vec![0x10, 0x20, 0x30])
         });
         let msg = Message::from_pub(publish).unwrap();
 
         assert_eq!(msg.topic.path(), "/a/b/c".to_string());
         assert_eq!(msg.qos, QoS::ExactlyOnce);
-        assert_eq!(msg.pid, Some(PacketIdentifier(2)));
+        assert_eq!(msg.pkid, Some(PacketIdentifier(2)));
         assert_eq!(msg.payload, Arc::new(vec![0x10, 0x20, 0x30]));
         assert!(msg.retain);
     }

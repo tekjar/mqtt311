@@ -42,13 +42,13 @@ pub struct Publish {
     pub qos: QoS,
     pub retain: bool,
     pub topic_name: String,
-    pub pid: Option<PacketIdentifier>,
+    pub pkid: Option<PacketIdentifier>,
     pub payload: Arc<Vec<u8>>
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Subscribe {
-    pub pid: PacketIdentifier,
+    pub pkid: PacketIdentifier,
 	// (topic path, qos)
 	pub topics: Vec<SubscribeTopic>
 }
@@ -61,7 +61,7 @@ pub struct SubscribeTopic {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Suback {
-    pub pid: PacketIdentifier,
+    pub pkid: PacketIdentifier,
 	// (error, qos)
 	// TODO: replace with enum
 	pub return_codes: Vec<SubscribeReturnCodes>
@@ -75,6 +75,6 @@ pub enum SubscribeReturnCodes {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Unsubscribe {
-    pub pid: PacketIdentifier,
+    pub pkid: PacketIdentifier,
 	pub topics: Vec<String>
 }
