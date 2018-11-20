@@ -260,8 +260,8 @@ impl Header {
     pub fn new(hd: u8, len: usize) -> Result<Header> {
         Ok(Header {
             hd: hd,
-            typ: try!(PacketType::from_hd(hd)),
-            len: len
+            typ: PacketType::from_hd(hd)?,
+            len
         })
     }
 

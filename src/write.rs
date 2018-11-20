@@ -7,7 +7,7 @@ pub trait MqttWrite: WriteBytesExt {
     fn write_packet(&mut self, packet: &Packet) -> Result<()> {
         match packet {
             &Packet::Connect(ref connect) => {
-                try!(self.write_u8(0b00010000));
+                self.write_u8(0b00010000)?;
                 let prot_name = connect.protocol.name();
                 let mut len = 8 + prot_name.len() + connect.client_id.len();
                 if let Some(ref last_will) = connect.last_will {
@@ -19,9 +19,9 @@ pub trait MqttWrite: WriteBytesExt {
                 if let Some(ref password) = connect.password {
                     len += 2 + password.len();
                 }
-                try!(self.write_remaining_length(len));
-                try!(self.write_mqtt_string(prot_name));
-                try!(self.write_u8(connect.protocol.level()));
+                self.write_remaining_length(len)?;
+                self.write_mqtt_string(prot_name)?;
+                self.write_u8(connect.protocol.level())?;
                 let mut connect_flags = 0;
                 if connect.clean_session {
                     connect_flags |= 0x02;
@@ -39,118 +39,123 @@ pub trait MqttWrite: WriteBytesExt {
                 if let Some(_) = connect.username {
                     connect_flags |= 0x80;
                 }
-                try!(self.write_u8(connect_flags));
-                try!(self.write_u16::<BigEndian>(connect.keep_alive));
-                try!(self.write_mqtt_string(connect.client_id.as_ref()));
+
+                self.write_u8(connect_flags)?;
+                self.write_u16::<BigEndian>(connect.keep_alive)?;
+                self.write_mqtt_string(connect.client_id.as_ref())?;
+
                 if let Some(ref last_will) = connect.last_will {
-                    try!(self.write_mqtt_string(last_will.topic.as_ref()));
-                    try!(self.write_mqtt_string(last_will.message.as_ref()));
+                    self.write_mqtt_string(last_will.topic.as_ref())?;
+                    self.write_mqtt_string(last_will.message.as_ref())?;
                 }
                 if let Some(ref username) = connect.username {
-                    try!(self.write_mqtt_string(username));
+                    self.write_mqtt_string(username)?;
                 }
                 if let Some(ref password) = connect.password {
-                    try!(self.write_mqtt_string(password));
+                    self.write_mqtt_string(password)?;
                 }
                 Ok(())
             },
             &Packet::Connack(ref connack) => {
-                try!(self.write_all(&[0x20, 0x02, connack.session_present as u8, connack.code.to_u8()]));
+                self.write_all(&[0x20, 0x02, connack.session_present as u8, connack.code.to_u8()])?;
                 Ok(())
             },
             &Packet::Publish(ref publish) => {
-                try!(self.write_u8(0b00110000 | publish.retain as u8 | (publish.qos.to_u8() << 1) | ((publish.dup as u8) << 3)));
+                self.write_u8(0b00110000 | publish.retain as u8 | (publish.qos.to_u8() << 1) | ((publish.dup as u8) << 3))?;
                 let mut len = publish.topic_name.len() + 2 + publish.payload.len();
+
                 if publish.qos != QoS::AtMostOnce && None != publish.pid {
                     len += 2;
                 }
-                try!(self.write_remaining_length(len));
-                try!(self.write_mqtt_string(publish.topic_name.as_str()));
+
+                self.write_remaining_length(len)?;
+                self.write_mqtt_string(publish.topic_name.as_str())?;
                 if publish.qos != QoS::AtMostOnce {
                     if let Some(pid) = publish.pid {
-                        try!(self.write_u16::<BigEndian>(pid.0));
+                        self.write_u16::<BigEndian>(pid.0)?;
                     }
                 }
-                try!(self.write_all(&publish.payload.as_ref()));
+
+                self.write_all(&publish.payload.as_ref())?;
                 Ok(())
             },
             &Packet::Puback(ref pid) => {
-                try!(self.write_all(&[0x40, 0x02]));
-                try!(self.write_u16::<BigEndian>(pid.0));
+                self.write_all(&[0x40, 0x02])?;
+                self.write_u16::<BigEndian>(pid.0)?;
                 Ok(())
             },
             &Packet::Pubrec(ref pid) => {
-                try!(self.write_all(&[0x50, 0x02]));
-                try!(self.write_u16::<BigEndian>(pid.0));
+                self.write_all(&[0x50, 0x02])?;
+                self.write_u16::<BigEndian>(pid.0)?;
                 Ok(())
             },
             &Packet::Pubrel(ref pid) => {
-                try!(self.write_all(&[0x62, 0x02]));
-                try!(self.write_u16::<BigEndian>(pid.0));
+                self.write_all(&[0x62, 0x02])?;
+                self.write_u16::<BigEndian>(pid.0)?;
                 Ok(())
             },
             &Packet::Pubcomp(ref pid) => {
-                try!(self.write_all(&[0x70, 0x02]));
-                try!(self.write_u16::<BigEndian>(pid.0));
+                self.write_all(&[0x70, 0x02])?;
+                self.write_u16::<BigEndian>(pid.0)?;
                 Ok(())
             },
             &Packet::Subscribe(ref subscribe) => {
-                try!(self.write_all(&[0x82]));
+                self.write_all(&[0x82])?;
                 let len = 2 + subscribe.topics.iter().fold(0, |s, ref t| s + t.topic_path.len() + 3);
-                try!(self.write_remaining_length(len));
-                try!(self.write_u16::<BigEndian>(subscribe.pid.0));
+                self.write_remaining_length(len)?;
+                self.write_u16::<BigEndian>(subscribe.pid.0)?;
                 for topic in subscribe.topics.as_ref() as &Vec<SubscribeTopic> {
-                    try!(self.write_mqtt_string(topic.topic_path.as_str()));
-                    try!(self.write_u8(topic.qos.to_u8()));
+                    self.write_mqtt_string(topic.topic_path.as_str())?;
+                    self.write_u8(topic.qos.to_u8())?;
                 }
                 Ok(())
             },
             &Packet::Suback(ref suback) => {
-                try!(self.write_all(&[0x90]));
-                try!(self.write_remaining_length(suback.return_codes.len() + 2));
-                try!(self.write_u16::<BigEndian>(suback.pid.0));
+                self.write_all(&[0x90])?;
+                self.write_remaining_length(suback.return_codes.len() + 2)?;
+                self.write_u16::<BigEndian>(suback.pid.0)?;
                 let payload: Vec<u8> = suback.return_codes.iter().map({ |&code|
                     match code {
                         SubscribeReturnCodes::Success(qos) => qos.to_u8(),
                         SubscribeReturnCodes::Failure => 0x80
                     }
                 }).collect();
-                try!(self.write_all(&payload));
+                self.write_all(&payload)?;
                 Ok(())
             },
             &Packet::Unsubscribe(ref unsubscribe) => {
-                try!(self.write_all(&[0xA2]));
+                self.write_all(&[0xA2])?;
                 let len = 2 + unsubscribe.topics.iter().fold(0, |s, ref topic| s + topic.len() + 2);
-                try!(self.write_remaining_length(len));
-                try!(self.write_u16::<BigEndian>(unsubscribe.pid.0));
+                self.write_remaining_length(len)?;
+                self.write_u16::<BigEndian>(unsubscribe.pid.0)?;
                 for topic in unsubscribe.topics.as_ref() as &Vec<String> {
-                    try!(self.write_mqtt_string(topic.as_str()));
+                    self.write_mqtt_string(topic.as_str())?;
                 }
                 Ok(())
             },
             &Packet::Unsuback(ref pid) => {
-                try!(self.write_all(&[0xB0, 0x02]));
-                try!(self.write_u16::<BigEndian>(pid.0));
+                self.write_all(&[0xB0, 0x02])?;
+                self.write_u16::<BigEndian>(pid.0)?;
                 Ok(())
             },
             &Packet::Pingreq => {
-                try!(self.write_all(&[0xc0, 0]));
+                self.write_all(&[0xc0, 0])?;
                 Ok(())
             },
             &Packet::Pingresp => {
-                try!(self.write_all(&[0xd0, 0]));
+                self.write_all(&[0xd0, 0])?;
                 Ok(())
             },
             &Packet::Disconnect => {
-                try!(self.write_all(&[0xe0, 0]));
+                self.write_all(&[0xe0, 0])?;
                 Ok(())
             }
         }
     }
 
     fn write_mqtt_string(&mut self, string: &str) -> Result<()> {
-        try!(self.write_u16::<BigEndian>(string.len() as u16));
-        try!(self.write_all(string.as_bytes()));
+        self.write_u16::<BigEndian>(string.len() as u16)?;
+        self.write_all(string.as_bytes())?;
         Ok(())
     }
 
@@ -168,7 +173,7 @@ pub trait MqttWrite: WriteBytesExt {
             if x > 0 {
                 byte = byte | 128;
             }
-            try!(self.write_u8(byte));
+            self.write_u8(byte)?;
             done = x <= 0;
         }
 

@@ -183,7 +183,7 @@ pub trait ToTopicPath {
     fn to_topic_path(&self) -> Result<TopicPath>;
 
     fn to_topic_name(&self) -> Result<TopicPath> {
-        let topic_name = try!(self.to_topic_path());
+        let topic_name = self.to_topic_path()?;
         match topic_name.wildcards {
             false => Ok(topic_name),
             true => Err(Error::TopicNameMustNotContainWildcard)
