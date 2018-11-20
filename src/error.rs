@@ -1,7 +1,6 @@
 use std::result;
 use std::io;
 use std::string::FromUtf8Error;
-use byteorder;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -36,8 +35,6 @@ pub enum Error {
     #[fail(display = "Unexpected EOF")]
     UnexpectedEof,
     #[fail(display = "Io failed. Error = {}", _0)]
-    Io(io::Error),
-    #[fail(display = "Byteorder failed. Error = {}", _0)]
-    ByteOrder(byteorder::Error)
+    Io(io::Error)
 }
 

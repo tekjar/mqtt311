@@ -7,6 +7,6 @@ repository = "https://github.com/tekjar/mqtt311"
 license = "MIT"
 
 [dependencies]
-byteorder = "0.4"
+byteorder = "1"
 failure = "0.1"
 derive_more = "0.13"
