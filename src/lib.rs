@@ -249,6 +249,13 @@ impl PacketIdentifier {
     }
 }
 
+impl From<PacketIdentifier> for u16 {
+    fn from(pkid : PacketIdentifier) -> Self {
+        pkid.0
+    }
+}
+
+
 //          7                          3                          0
 //          +--------------------------+--------------------------+
 // byte 1   | MQTT Control Packet Type | Flags for each type      |
