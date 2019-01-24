@@ -1,7 +1,7 @@
 [package]
 name = "mqtt311"
 version = "0.2.0"
-authors = ["Ravi Teja <k.teza1@gmail.com>"]
+authors = ["Ravi Teja <mail@raviteja.tech>"]
 description = "Mqtt3 is a crate to read/write MQTT-packet from/to a stream."
 repository = "https://github.com/tekjar/mqtt311"
 license = "MIT"
